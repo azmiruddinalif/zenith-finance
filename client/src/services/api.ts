@@ -1,7 +1,7 @@
 import { localDb } from './offlineDb';
 import { Transaction, Category, Account, BudgetData, RecurringExpense, Reminder, AiSpendingInsight } from '../types';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5001/api';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://server-ashy-xi-93.vercel.app/api';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('zenith_token');

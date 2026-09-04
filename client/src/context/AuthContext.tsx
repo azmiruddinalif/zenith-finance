@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       try {
-        const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5001/api'}/auth/me`, {
+        const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'https://server-ashy-xi-93.vercel.app/api'}/auth/me`, {
           headers: { Authorization: `Bearer ${savedToken}` },
         });
         const data = await res.json();
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, pass: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5001/api'}/auth/login`, {
+      const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'https://server-ashy-xi-93.vercel.app/api'}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass }),
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = async (name: string, email: string, pass: string, defaultCurrency = 'BDT') => {
     try {
-      const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'http://localhost:5001/api'}/auth/register`, {
+      const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'https://server-ashy-xi-93.vercel.app/api'}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password: pass, defaultCurrency }),

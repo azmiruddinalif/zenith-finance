@@ -44,6 +44,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Api-Version');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
@@ -94,10 +104,12 @@ app.post('/api/import/commit', commitImportedTransactions as any);
 
 app.get('/api/ai/analysis', getAiSpendingAnalysis as any);
 
-app.listen(PORT, async () => {
-  console.log(`⚡ Zenith Finance Multi-User Server running on http://localhost:${PORT}`);
-  await checkDbConnection();
-});
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, async () => {
+    console.log(`⚡ Zenith Finance Multi-User Server running on http://localhost:${PORT}`);
+    await checkDbConnection();
+  });
+}
 
 export { app };
 export default app;
