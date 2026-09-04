@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, Lock, Mail, User, Globe, X, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Lock, Mail, User, Globe, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../services/api';
 
 export const AuthScreen: React.FC = () => {
@@ -34,10 +34,14 @@ export const AuthScreen: React.FC = () => {
 
     if (isLogin) {
       const res = await login(email, password);
-      if (!res.success) setError(res.message || 'Login failed');
+      if (!res.success) {
+        setError(res.message || 'Login failed. Please check your credentials.');
+      }
     } else {
       const res = await register(name, email, password, currency);
-      if (!res.success) setError(res.message || 'Registration failed');
+      if (!res.success) {
+        setError(res.message || 'Registration failed');
+      }
     }
     setLoading(false);
   };
@@ -91,7 +95,7 @@ export const AuthScreen: React.FC = () => {
             Zenith Finance
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Production-grade personal wealth & offline-first expense platform
+            Production-grade personal wealth & expense management platform
           </p>
         </div>
 
@@ -119,16 +123,16 @@ export const AuthScreen: React.FC = () => {
           </button>
         </div>
 
-        {/* Social Sign-In Buttons */}
-        <div className="grid grid-cols-2 gap-2.5 mb-4">
+        {/* 1-Click Social Sign-In Buttons */}
+        <div className="grid grid-cols-2 gap-2.5 mb-2">
           
-          {/* Google Button */}
+          {/* Google Button - 1 Click Instant Sign In */}
           <button
             type="button"
             id="btn-google-signin"
             disabled={Boolean(socialLoading) || loading}
-            onClick={() => handleOpenSocialModal('google')}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-slate-500 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
+            onClick={() => handleExecuteSocialLogin('google', 'alifazmiruddin@gmail.com', 'Alif Azmiruddin')}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-emerald-500/50 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
           >
             <svg className="w-4 h-4 shrink-0 transition group-hover:scale-110" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -139,13 +143,13 @@ export const AuthScreen: React.FC = () => {
             <span>{socialLoading === 'google' ? 'Connecting...' : 'Google'}</span>
           </button>
 
-          {/* Facebook Button */}
+          {/* Facebook Button - 1 Click Instant Sign In */}
           <button
             type="button"
             id="btn-facebook-signin"
             disabled={Boolean(socialLoading) || loading}
-            onClick={() => handleOpenSocialModal('facebook')}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-slate-500 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
+            onClick={() => handleExecuteSocialLogin('facebook', 'azmir.facebook@gmail.com', 'Azmir Uddin')}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-emerald-500/50 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
           >
             <svg className="w-4 h-4 shrink-0 fill-[#1877F2] transition group-hover:scale-110" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -153,6 +157,18 @@ export const AuthScreen: React.FC = () => {
             <span>{socialLoading === 'facebook' ? 'Connecting...' : 'Facebook'}</span>
           </button>
 
+        </div>
+
+        {/* 1-Click Profile Helper & Switcher */}
+        <div className="flex items-center justify-between mb-4 px-1 text-[11px] text-slate-400">
+          <span>1-click Google: <strong className="text-slate-300">alifazmiruddin</strong></span>
+          <button
+            type="button"
+            onClick={() => handleOpenSocialModal('google')}
+            className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition"
+          >
+            Switch account
+          </button>
         </div>
 
         {/* Divider: Or continue with email */}
@@ -169,8 +185,20 @@ export const AuthScreen: React.FC = () => {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300 animate-fade-in">
-            {error}
+          <div className="mb-4 p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300 animate-fade-in flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+            {isLogin && error.toLowerCase().includes('invalid') && (
+              <button
+                type="button"
+                onClick={() => { setIsLogin(false); setError(null); }}
+                className="text-left text-[11px] text-emerald-400 hover:underline mt-1 pl-6"
+              >
+                Don't have an account yet? Click here to Create Free Account →
+              </button>
+            )}
           </div>
         )}
 
@@ -187,7 +215,7 @@ export const AuthScreen: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Azmir Uddin"
+                  placeholder="Azmir Uddin"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
@@ -267,7 +295,7 @@ export const AuthScreen: React.FC = () => {
 
       </div>
 
-      {/* Social Identity Confirmation Modal */}
+      {/* Social Identity Custom Email Switcher Modal */}
       {socialModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-sm glass-panel-elevated rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
@@ -312,19 +340,19 @@ export const AuthScreen: React.FC = () => {
               <button
                 type="button"
                 id="btn-social-quick-profile"
-                onClick={() => handleExecuteSocialLogin(socialModal.provider, socialModal.customEmail, socialModal.customName)}
+                onClick={() => handleExecuteSocialLogin(socialModal.provider, 'alifazmiruddin@gmail.com', 'Alif Azmiruddin')}
                 className="w-full p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700 hover:border-emerald-500/50 text-left transition flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-slate-950 shadow">
-                    {socialModal.customName.charAt(0)}
+                    A
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white group-hover:text-emerald-300 transition">
-                      {socialModal.customName}
+                      Alif Azmiruddin
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      {socialModal.customEmail}
+                      alifazmiruddin@gmail.com
                     </p>
                   </div>
                 </div>
