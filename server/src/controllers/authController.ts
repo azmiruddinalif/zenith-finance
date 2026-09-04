@@ -167,3 +167,64 @@ export const getMe = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+export const socialLogin = async (req: Request, res: Response) => {
+  try {
+    const { provider = 'google', email, name, defaultCurrency = 'BDT' } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email address is required for social sign in' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      // Create new user record for social auth
+      const randomSecret = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const hashedPassword = await bcrypt.hash(`oauth_${provider}_${randomSecret}`, 10);
+      
+      const displayName = name && name.trim().length > 0 
+        ? name.trim() 
+        : (provider === 'google' ? normalizedEmail.split('@')[0] : 'Facebook User');
+
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          password: hashedPassword,
+          name: displayName,
+          defaultCurrency,
+          monthlyBudget: 50000,
+        },
+      });
+
+      // Auto-provision initial categories and accounts
+      await provisionStarterKit(user.id, defaultCurrency);
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      message: `Signed in with ${provider.charAt(0).toUpperCase() + provider.slice(1)} successfully`,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          defaultCurrency: user.defaultCurrency,
+          monthlyBudget: user.monthlyBudget,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Social login error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Social sign-in failed' });
+  }
+};

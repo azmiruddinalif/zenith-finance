@@ -15,6 +15,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, pass: string, currency?: string) => Promise<{ success: boolean; message?: string }>;
+  socialLogin: (provider: 'google' | 'facebook', email: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -95,6 +96,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+
+  const socialLogin = async (provider: 'google' | 'facebook', email: string, name?: string) => {
+    try {
+      const res = await fetch(`${(import.meta as any).env?.VITE_API_URL || 'https://server-ashy-xi-93.vercel.app/api'}/auth/social-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, email, name }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        localStorage.setItem('zenith_token', data.data.token);
+        setToken(data.data.token);
+        setUser(data.data.user);
+        return { success: true };
+      }
+      return { success: false, message: data.message || `${provider} sign-in failed` };
+    } catch (err: any) {
+      return { success: false, message: 'Server is unreachable' };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('zenith_token');
     setToken(null);
@@ -110,6 +132,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading,
         login,
         register,
+        socialLogin,
         logout,
       }}
     >

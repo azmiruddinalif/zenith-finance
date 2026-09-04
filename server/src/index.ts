@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 
 import { authenticateToken } from './middleware/auth';
-import { register, login, getMe } from './controllers/authController';
+import { register, login, getMe, socialLogin } from './controllers/authController';
 import {
   getTransactions,
   createTransaction,
@@ -73,6 +73,7 @@ app.get('/api/health', async (_req, res) => {
 // Auth Routes (Public)
 app.post('/api/auth/register', register);
 app.post('/api/auth/login', login);
+app.post('/api/auth/social-login', socialLogin);
 
 // Protected Routes (Require JWT)
 app.use('/api', authenticateToken as any);
