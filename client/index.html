@@ -12,6 +12,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+      <script>
+      // Immediately purge legacy caches if found
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        caches.keys().then(function(keys) {
+          keys.forEach(function(key) {
+            if (key !== 'zenith-finance-v2') {
+              caches.delete(key);
+            }
+          });
+        });
+      }
+    </script>
   </head>
   <body class="bg-[#070A0F] text-slate-100 font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
     <div id="root"></div>
@@ -19,7 +31,11 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration error:', err));
+          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+            .then((reg) => {
+              reg.update();
+            })
+            .catch((err) => console.log('SW registration error:', err));
         });
       }
     </script>
