@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { 
   TrendingUp, TrendingDown, Wallet, PiggyBank, 
@@ -9,7 +9,24 @@ import {
   PieChart as RechartsPie, Pie, Cell 
 } from 'recharts';
 
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-[#090D16] border border-slate-700/90 px-3.5 py-2 rounded-xl shadow-2xl backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: data.payload?.color || data.color }} />
+          <span className="text-xs font-semibold text-white">{data.name}:</span>
+          <span className="text-xs font-extrabold text-white">{data.payload?.formattedValue || data.value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const Dashboard: React.FC = () => {
+  const [activeCategory, setActiveCategory] = useState<{ name: string; value: number; color: string } | null>(null);
   const { 
     formatMoney, transactions, accounts, budget, 
     reminders, aiInsight, setActiveTab, setIsAiModalOpen, setIsQuickAddOpen 
@@ -48,6 +65,7 @@ export const Dashboard: React.FC = () => {
     categoryMap[name].value += t.amount;
   });
   const pieData = Object.values(categoryMap).slice(0, 6);
+  const totalCategoryExpense = pieData.reduce((acc, c) => acc + c.value, 0);
 
   return (
     <div className="space-y-6 pb-20 lg:pb-8">
@@ -182,8 +200,9 @@ export const Dashboard: React.FC = () => {
                 <XAxis dataKey="day" stroke="#64748B" fontSize={11} tickLine={false} />
                 <YAxis stroke="#64748B" fontSize={11} tickLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0D131F', borderColor: '#1E293B', borderRadius: '8px', fontSize: '12px' }} 
-                  itemStyle={{ color: '#F1F5F9' }}
+                  contentStyle={{ backgroundColor: '#090D16', borderColor: '#334155', borderRadius: '10px', fontSize: '12px', color: '#FFFFFF', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }} 
+                  itemStyle={{ color: '#FFFFFF', fontWeight: 600 }}
+                  labelStyle={{ color: '#FFFFFF', fontWeight: 700 }}
                 />
                 <Area type="monotone" dataKey="income" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#incomeGrad)" />
                 <Area type="monotone" dataKey="expense" stroke="#F43F5E" strokeWidth={2} fillOpacity={1} fill="url(#expenseGrad)" />
@@ -195,8 +214,15 @@ export const Dashboard: React.FC = () => {
         {/* Expense Category Breakdown (1 Col) */}
         <div className="glass-panel rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-white mb-1">Top Spend Categories</h3>
-            <p className="text-xs text-slate-400 mb-4">Monthly allocation breakdown</p>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-bold text-white">Top Spend Categories</h3>
+              {activeCategory && (
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 animate-fade-in">
+                  {totalCategoryExpense > 0 ? Math.round((activeCategory.value / totalCategoryExpense) * 100) : 0}% of total
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mb-3">Monthly allocation breakdown</p>
 
             <div className="h-44 w-full relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -207,28 +233,82 @@ export const Dashboard: React.FC = () => {
                     outerRadius={75}
                     paddingAngle={4}
                     dataKey="value"
+                    onMouseEnter={(_data, index) => setActiveCategory(pieData[index] || null)}
+                    onMouseLeave={() => setActiveCategory(null)}
+                    onClick={(_data, index) => setActiveCategory(pieData[index] || null)}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color} 
+                        className="cursor-pointer transition-all hover:opacity-80"
+                      />
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0D131F', borderColor: '#1E293B', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(val: any) => formatMoney(Number(val))}
+                    contentStyle={{ 
+                      backgroundColor: '#090D16', 
+                      borderColor: '#334155', 
+                      borderRadius: '10px', 
+                      fontSize: '12px', 
+                      color: '#FFFFFF', 
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.7)',
+                      padding: '8px 12px'
+                    }}
+                    itemStyle={{ color: '#FFFFFF', fontWeight: 700, fontSize: '12px' }}
+                    labelStyle={{ color: '#FFFFFF', fontWeight: 700, fontSize: '12px' }}
+                    formatter={(val: any, name: any) => [`${formatMoney(Number(val))}`, `${name}`]}
                   />
                 </RechartsPie>
               </ResponsiveContainer>
+
+              {/* Center Donut Label (High-Contrast White) */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider truncate max-w-[90px]">
+                  {activeCategory ? activeCategory.name : 'Total Spend'}
+                </span>
+                <span className="text-xs sm:text-sm font-black text-white">
+                  {formatMoney(activeCategory ? activeCategory.value : totalCategoryExpense)}
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Responsive Bottom Category Details & Breakdown */}
           <div className="space-y-2 mt-3 pt-3 border-t border-slate-800/80">
-            {pieData.slice(0, 3).map((cat) => (
-              <div key={cat.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                  <span className="text-slate-300 truncate max-w-[120px]">{cat.name}</span>
+            
+            {/* Dedicated Selected/Hovered Detail at Bottom */}
+            {activeCategory && (
+              <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between animate-fade-in shadow-md mb-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full shrink-0 shadow" style={{ backgroundColor: activeCategory.color }} />
+                  <div>
+                    <p className="text-xs font-bold text-white">{activeCategory.name}</p>
+                    <p className="text-[10px] text-emerald-400 font-semibold">
+                      {totalCategoryExpense > 0 ? Math.round((activeCategory.value / totalCategoryExpense) * 100) : 0}% of monthly spend
+                    </p>
+                  </div>
                 </div>
-                <span className="font-semibold text-white">{formatMoney(cat.value)}</span>
+                <div className="text-right">
+                  <span className="text-sm font-black text-white tracking-tight">{formatMoney(activeCategory.value)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Top 3 Breakdown List with Bold White Numbers */}
+            {pieData.slice(0, 3).map((cat) => (
+              <div 
+                key={cat.name} 
+                onClick={() => setActiveCategory(activeCategory?.name === cat.name ? null : cat)}
+                className={`flex items-center justify-between text-xs p-1.5 rounded-lg cursor-pointer transition ${
+                  activeCategory?.name === cat.name ? 'bg-slate-800/80 border border-slate-700' : 'hover:bg-slate-900/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-slate-300 truncate max-w-[140px] font-medium">{cat.name}</span>
+                </div>
+                <span className="font-bold text-white">{formatMoney(cat.value)}</span>
               </div>
             ))}
           </div>

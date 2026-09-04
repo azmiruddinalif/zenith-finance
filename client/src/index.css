@@ -86,3 +86,24 @@ body {
 .animate-pulse-slow {
   animation: pulse-slow 3s infinite ease-in-out;
 }
+
+
+/* Global High-Contrast Recharts Tooltips (Bright White Text) */
+.recharts-default-tooltip {
+  background-color: #090D16 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
+  padding: 8px 14px !important;
+  color: #FFFFFF !important;
+}
+
+.recharts-tooltip-item,
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value,
+.recharts-tooltip-label,
+.recharts-default-tooltip * {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}

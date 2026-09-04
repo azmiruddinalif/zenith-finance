@@ -39,8 +39,10 @@ export const AnalyticsView: React.FC = () => {
                 <XAxis dataKey="name" stroke="#64748B" fontSize={10} angle={-25} textAnchor="end" />
                 <YAxis stroke="#64748B" fontSize={10} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0D131F', borderColor: '#1E293B', borderRadius: '8px', fontSize: '12px' }}
-                  formatter={(val: any) => formatMoney(Number(val))}
+                  contentStyle={{ backgroundColor: '#090D16', borderColor: '#334155', borderRadius: '10px', fontSize: '12px', color: '#FFFFFF', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }}
+                  itemStyle={{ color: '#FFFFFF', fontWeight: 600 }}
+                  labelStyle={{ color: '#FFFFFF', fontWeight: 700 }}
+                  formatter={(val: any) => [formatMoney(Number(val)), 'Spending']}
                 />
                 <Bar dataKey="amount" fill="#10B981" radius={[4, 4, 0, 0]} />
               </BarChart>
