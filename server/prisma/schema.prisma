@@ -1,0 +1,167 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+enum AccountType {
+  CASH
+  BANK
+  MOBILE_WALLET
+  CREDIT_CARD
+  SAVINGS
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id              String             @id @default(uuid())
+  email           String             @unique
+  password        String
+  name            String
+  defaultCurrency String             @default("BDT")
+  monthlyBudget   Float              @default(50000)
+  accounts        Account[]
+  categories      Category[]
+  transactions    Transaction[]
+  budgets         Budget[]
+  recurring       RecurringExpense[]
+  reminders       Reminder[]
+  aiInsights      AiInsight[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Account {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  type          AccountType        @default(BANK)
+  balance       Float              @default(0)
+  currency      String             @default("BDT")
+  color         String             @default("#10B981")
+  accountNumber String?
+  transactions  Transaction[]
+  recurring     RecurringExpense[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model Category {
+  id           String             @id @default(uuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  type         TransactionType    @default(EXPENSE)
+  icon         String             @default("wallet")
+  color        String             @default("#10B981")
+  budgetLimit  Float              @default(0)
+  transactions Transaction[]
+  recurring    RecurringExpense[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TransactionType @default(EXPENSE)
+  amount      Float
+  currency    String          @default("BDT")
+  description String
+  date        DateTime        @default(now())
+  notes       String?
+  tags        String?
+  isRecurring Boolean         @default(false)
+  
+  categoryId  String
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  accountId   String
+  account     Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  totalLimit Float
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, month, year])
+}
+
+model RecurringExpense {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  amount      Float
+  currency    String    @default("BDT")
+  frequency   Frequency @default(MONTHLY)
+  nextDueDate DateTime
+  lastLogged  DateTime?
+  isActive    Boolean   @default(true)
+  autoLog     Boolean   @default(false)
+  
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  accountId   String
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Reminder {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  amount    Float?
+  currency  String   @default("BDT")
+  dueDate   DateTime
+  isPaid    Boolean  @default(false)
+  category  String?  @default("General")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AiInsight {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  healthScore     Int      @default(80)
+  summaryEn       String
+  summaryBn       String
+  recommendations String
+  anomalies       String
+  month           Int
+  year            Int
+  createdAt       DateTime @default(now())
+}

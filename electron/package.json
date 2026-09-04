@@ -1,0 +1,13 @@
+{
+  "name": "zenith-finance-desktop",
+  "version": "1.0.0",
+  "description": "Zenith Finance - Native Desktop Electron Shell",
+  "main": "main.js",
+  "scripts": {
+    "electron": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^34.2.0"
+  }
+}

@@ -1,0 +1,85 @@
+import React from 'react';
+import { useFinance } from '../context/FinanceContext';
+import { 
+  LayoutDashboard, Receipt, PieChart, Target, 
+  Repeat, UploadCloud, Sparkles, ShieldCheck 
+} from 'lucide-react';
+
+export const Sidebar: React.FC = () => {
+  const { activeTab, setActiveTab, setIsAiModalOpen, setIsImportModalOpen } = useFinance();
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'transactions', label: 'Transactions', icon: Receipt },
+    { id: 'analytics', label: 'Analytics & Charts', icon: PieChart },
+    { id: 'budgets', label: 'Monthly Budgets', icon: Target },
+    { id: 'recurring', label: 'Recurring & Bills', icon: Repeat },
+  ];
+
+  return (
+    <aside className="hidden lg:flex flex-col w-64 glass-panel border-r border-slate-800/80 p-4 shrink-0 min-h-[calc(100vh-61px)]">
+      
+      {/* Navigation Links */}
+      <div className="space-y-1">
+        <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          Finance Management
+        </p>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop Tools Section */}
+      <div className="mt-8 space-y-1">
+        <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          Intelligence & Tools
+        </p>
+        
+        <button
+          onClick={() => setIsImportModalOpen(true)}
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-cyan-300 hover:bg-cyan-950/20 border border-transparent hover:border-cyan-800/30 transition-all"
+        >
+          <UploadCloud className="w-4 h-4 text-cyan-400" />
+          <span>Bank Statement Import</span>
+        </button>
+
+        <button
+          onClick={() => setIsAiModalOpen(true)}
+          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-violet-300 hover:bg-violet-950/20 border border-transparent hover:border-violet-800/30 transition-all"
+        >
+          <Sparkles className="w-4 h-4 text-violet-400" />
+          <span>AI Spending Advisory</span>
+        </button>
+      </div>
+
+      {/* Security & Offline Guarantee Banner */}
+      <div className="mt-auto pt-6">
+        <div className="rounded-xl p-3.5 bg-slate-900/60 border border-slate-800 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-emerald-400 font-medium mb-1">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Zero-Data Loss</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-400">
+            Offline transactions are held securely in IndexedDB and synchronized with PostgreSQL when online.
+          </p>
+        </div>
+      </div>
+
+    </aside>
+  );
+};

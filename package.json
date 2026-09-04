@@ -1,0 +1,19 @@
+{
+  "name": "zenith-finance-suite",
+  "version": "1.0.0",
+  "description": "Zenith Finance - Intelligent Personal Wealth & Expense Engine",
+  "private": true,
+  "scripts": {
+    "server:dev": "npm run dev --prefix server",
+    "server:seed": "npm run seed --prefix server",
+    "client:dev": "npm run dev --prefix client",
+    "client:build": "npm run build --prefix client",
+    "electron:dev": "electron ./electron",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"cyan.bold,green.bold\" \"npm run server:dev\" \"npm run client:dev\"",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^34.2.0"
+  }
+}
