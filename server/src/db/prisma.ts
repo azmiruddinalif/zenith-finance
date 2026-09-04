@@ -6,10 +6,10 @@ export const prisma = new PrismaClient({
 
 export async function checkDbConnection(): Promise<boolean> {
   try {
+    if (!process.env.DATABASE_URL) return false;
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
-    console.warn('⚠️  PostgreSQL connection check failed. Ensure zenith_finance database exists.');
     return false;
   }
 }

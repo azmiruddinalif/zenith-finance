@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
-import { TransactionType, AccountType } from '@prisma/client';
+
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zenith_ultra_secure_jwt_secret_key_2026_production';
 
@@ -11,9 +11,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'zenith_ultra_secure_jwt_secret_key
 export async function provisionStarterKit(userId: string, currency: string = 'BDT') {
   // 1. Starter Accounts
   const starterAccounts = [
-    { name: 'Primary Bank Account', type: AccountType.BANK, balance: 0, currency, color: '#0284C7' },
-    { name: 'Cash on Hand', type: AccountType.CASH, balance: 0, currency, color: '#10B981' },
-    { name: 'Mobile Wallet / Digital', type: AccountType.MOBILE_WALLET, balance: 0, currency, color: '#E11D48' },
+    { name: 'Primary Bank Account', type: 'BANK' as any, balance: 0, currency, color: '#0284C7' },
+    { name: 'Cash on Hand', type: 'CASH' as any, balance: 0, currency, color: '#10B981' },
+    { name: 'Mobile Wallet / Digital', type: 'MOBILE_WALLET' as any, balance: 0, currency, color: '#E11D48' },
   ];
 
   for (const acc of starterAccounts) {
@@ -24,16 +24,16 @@ export async function provisionStarterKit(userId: string, currency: string = 'BD
 
   // 2. Starter Categories
   const starterCategories = [
-    { name: 'Salary & Earnings', type: TransactionType.INCOME, icon: 'badge-dollar-sign', color: '#10B981', budgetLimit: 0 },
-    { name: 'Freelance & Side Income', type: TransactionType.INCOME, icon: 'laptop', color: '#06B6D4', budgetLimit: 0 },
-    { name: 'Housing & Rent', type: TransactionType.EXPENSE, icon: 'home', color: '#F59E0B', budgetLimit: 20000 },
-    { name: 'Groceries & Food', type: TransactionType.EXPENSE, icon: 'shopping-cart', color: '#10B981', budgetLimit: 15000 },
-    { name: 'Dining & Restaurants', type: TransactionType.EXPENSE, icon: 'utensils', color: '#EC4899', budgetLimit: 8000 },
-    { name: 'Utilities & Bills', type: TransactionType.EXPENSE, icon: 'zap', color: '#EAB308', budgetLimit: 5000 },
-    { name: 'Transport & Fuel', type: TransactionType.EXPENSE, icon: 'car', color: '#6366F1', budgetLimit: 6000 },
-    { name: 'Shopping & Apparel', type: TransactionType.EXPENSE, icon: 'shopping-bag', color: '#A855F7', budgetLimit: 6000 },
-    { name: 'Healthcare & Medical', type: TransactionType.EXPENSE, icon: 'heart-pulse', color: '#EF4444', budgetLimit: 4000 },
-    { name: 'Entertainment & Subscriptions', type: TransactionType.EXPENSE, icon: 'tv', color: '#8B5CF6', budgetLimit: 3000 },
+    { name: 'Salary & Earnings', type: 'INCOME' as any, icon: 'badge-dollar-sign', color: '#10B981', budgetLimit: 0 },
+    { name: 'Freelance & Side Income', type: 'INCOME' as any, icon: 'laptop', color: '#06B6D4', budgetLimit: 0 },
+    { name: 'Housing & Rent', type: 'EXPENSE' as any, icon: 'home', color: '#F59E0B', budgetLimit: 20000 },
+    { name: 'Groceries & Food', type: 'EXPENSE' as any, icon: 'shopping-cart', color: '#10B981', budgetLimit: 15000 },
+    { name: 'Dining & Restaurants', type: 'EXPENSE' as any, icon: 'utensils', color: '#EC4899', budgetLimit: 8000 },
+    { name: 'Utilities & Bills', type: 'EXPENSE' as any, icon: 'zap', color: '#EAB308', budgetLimit: 5000 },
+    { name: 'Transport & Fuel', type: 'EXPENSE' as any, icon: 'car', color: '#6366F1', budgetLimit: 6000 },
+    { name: 'Shopping & Apparel', type: 'EXPENSE' as any, icon: 'shopping-bag', color: '#A855F7', budgetLimit: 6000 },
+    { name: 'Healthcare & Medical', type: 'EXPENSE' as any, icon: 'heart-pulse', color: '#EF4444', budgetLimit: 4000 },
+    { name: 'Entertainment & Subscriptions', type: 'EXPENSE' as any, icon: 'tv', color: '#8B5CF6', budgetLimit: 3000 },
   ];
 
   for (const cat of starterCategories) {

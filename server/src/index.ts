@@ -98,3 +98,16 @@ app.listen(PORT, async () => {
   console.log(`⚡ Zenith Finance Multi-User Server running on http://localhost:${PORT}`);
   await checkDbConnection();
 });
+
+export { app };
+export default app;
+
+// Global Error Handler
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+    database: process.env.DATABASE_URL ? 'configured' : 'missing_database_url',
+  });
+});
