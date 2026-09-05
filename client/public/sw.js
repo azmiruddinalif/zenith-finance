@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zenith-finance-v2';
+const CACHE_NAME = 'zenith-finance-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -10,7 +10,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[SW] Purging old cache:', key);
+            console.log('[SW] Purging outdated cache:', key);
             return caches.delete(key);
           }
         })
@@ -21,42 +21,80 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Let API requests bypass standard asset cache
-  if (event.request.url.includes('/api/')) {
+  const req = event.request;
+  const urlString = req.url;
+
+  // 1. STRICT SCHEME GUARD: Only handle http/https requests
+  if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
+    return; // Bypass chrome-extension://, moz-extension://, ws://, etc.
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(urlString);
+  } catch {
     return;
   }
 
-  // Network-First for HTML navigation so updates are instant and stale index.html is never served
-  if (event.request.mode === 'navigate') {
+  // 2. DEV GUARD: Do not intercept Vite dev server / HMR / internal files
+  if (
+    parsedUrl.port === '5173' ||
+    parsedUrl.pathname.includes('/@vite/') ||
+    parsedUrl.pathname.includes('/@fs/') ||
+    parsedUrl.pathname.includes('/@id/') ||
+    parsedUrl.pathname.startsWith('/src/') ||
+    parsedUrl.search.includes('?token=') ||
+    parsedUrl.search.includes('&token=')
+  ) {
+    return;
+  }
+
+  // 3. API GUARD: Let backend API requests pass directly to network
+  if (parsedUrl.pathname.includes('/api/')) {
+    return;
+  }
+
+  // 4. EXTERNAL / EXTENSION SCRIPT GUARD: Ignore foreign origin scripts
+  if (parsedUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  // 5. NAVIGATION REQUESTS (HTML): Network-First with safe offline fallback
+  if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(req)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
           }
           return networkResponse;
         })
         .catch(() => {
-          return caches.match('/index.html') || caches.match('/');
+          return caches.match('/index.html').then((cached) => cached || caches.match('/'));
         })
     );
     return;
   }
 
-  // Cache-First for static assets, but NEVER fallback to HTML on error
+  // 6. STATIC ASSETS: Cache-First with safe network fetch and error catching
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(req).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
-          const clone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return networkResponse;
-      });
+      return fetch(req)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && req.method === 'GET') {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
+          }
+          return networkResponse;
+        })
+        .catch((err) => {
+          // Never let promise reject into the browser console for missing assets
+          return new Response('', { status: 404, statusText: 'Not Found' });
+        });
     })
   );
 });

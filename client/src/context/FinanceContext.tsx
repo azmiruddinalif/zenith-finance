@@ -158,8 +158,38 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   );
 };
 
+const fallbackFinanceContext: FinanceContextType = {
+  isOnline: true,
+  currency: 'BDT',
+  setCurrency: () => {},
+  formatMoney: (val: number) => `${val}`,
+  transactions: [],
+  categories: [],
+  accounts: [],
+  budget: null,
+  recurring: [],
+  reminders: [],
+  aiInsight: null,
+  activeTab: 'dashboard',
+  setActiveTab: () => {},
+  isQuickAddOpen: false,
+  setIsQuickAddOpen: () => {},
+  isAiModalOpen: false,
+  setIsAiModalOpen: () => {},
+  isImportModalOpen: false,
+  setIsImportModalOpen: () => {},
+  refreshData: async () => {},
+  addTransaction: async () => false,
+  deleteTransaction: async () => false,
+  notification: null,
+  showNotification: () => {},
+};
+
 export const useFinance = () => {
   const context = useContext(FinanceContext);
-  if (!context) throw new Error('useFinance must be used within FinanceProvider');
+  if (!context) {
+    console.warn('[useFinance] Context accessed outside FinanceProvider; returning safe fallback.');
+    return fallbackFinanceContext;
+  }
   return context;
 };

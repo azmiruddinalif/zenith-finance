@@ -10,7 +10,7 @@ import { CURRENCY_SYMBOLS } from '../services/api';
 
 export const UserProfileModal: React.FC = () => {
   const { user, isProfileModalOpen, setIsProfileModalOpen, logout, updateUserProfile } = useAuth();
-  const { currency, setCurrency, accounts, transactions, budget } = useFinance();
+  const { currency = "BDT", setCurrency = () => {}, accounts = [], transactions = [], budget = null } = useFinance();
 
   const [copiedId, setCopiedId] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);

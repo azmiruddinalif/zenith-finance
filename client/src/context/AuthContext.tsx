@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { localDb } from '../services/offlineDb';
+import { authService, SocialProvider, ServiceResult } from '../services/authService';
 
 export interface UserProfile {
   id: string;
@@ -17,182 +18,114 @@ interface AuthContextType {
   isLoading: boolean;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
-  login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
-  register: (name: string, email: string, pass: string, currency?: string) => Promise<{ success: boolean; message?: string }>;
-  socialLogin: (provider: 'google' | 'facebook', email: string, name?: string) => Promise<{ success: boolean; message?: string }>;
-  updateUserProfile: (data: { name?: string; defaultCurrency?: string; monthlyBudget?: number }) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, pass: string) => Promise<ServiceResult<any>>;
+  register: (name: string, email: string, pass: string, currency?: string) => Promise<ServiceResult<any>>;
+  socialLogin: (provider: SocialProvider, email: string, name?: string, defaultCurrency?: string) => Promise<ServiceResult<any>>;
+  updateUserProfile: (data: { name?: string; defaultCurrency?: string; monthlyBudget?: number }) => Promise<ServiceResult<UserProfile>>;
   refreshUserProfile: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const getApiBase = (): string => {
-  const envUrl = (import.meta as any).env?.VITE_API_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.startsWith('http')) {
-    return envUrl.replace(/\/+$/, '');
-  }
-  return 'https://server-ashy-xi-93.vercel.app/api';
-};
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('zenith_token'));
+  const [token, setToken] = useState<string | null>(authService.getToken());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
-  const fetchCurrentUser = async (savedToken: string) => {
-    try {
-      const res = await fetch(`${getApiBase()}/auth/me`, {
-        headers: { Authorization: `Bearer ${savedToken}` },
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setUser(data.data);
-        setToken(savedToken);
-        return true;
-      } else {
-        await logout();
-        return false;
-      }
-    } catch {
-      return false;
-    }
-  };
-
   // Hydrate user profile on load
   useEffect(() => {
+    let isMounted = true;
+
     const hydrateUser = async () => {
-      const savedToken = localStorage.getItem('zenith_token');
+      const savedToken = authService.getToken();
       if (!savedToken) {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
         return;
       }
-      await fetchCurrentUser(savedToken);
+
+      const res = await authService.getMe(savedToken);
+      if (!isMounted) return;
+
+      if (res.success && res.data) {
+        setUser(res.data);
+        setToken(savedToken);
+      } else {
+        await logout();
+      }
       setIsLoading(false);
     };
 
     hydrateUser();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const refreshUserProfile = async () => {
-    const savedToken = token || localStorage.getItem('zenith_token');
-    if (savedToken) {
-      await fetchCurrentUser(savedToken);
+    const savedToken = token || authService.getToken();
+    if (!savedToken) return;
+
+    const res = await authService.getMe(savedToken);
+    if (res.success && res.data) {
+      setUser(res.data);
     }
   };
 
   const login = async (email: string, pass: string) => {
-    try {
-      const res = await fetch(`${getApiBase()}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password: pass }),
-      });
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        return { success: false, message: 'Server returned an invalid response' };
-      }
-      if (data.success && data.data) {
-        localStorage.setItem('zenith_token', data.data.token);
-        setToken(data.data.token);
-        setUser(data.data.user);
-        return { success: true };
-      }
-      return { success: false, message: data.message || 'Invalid email or password' };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Unable to connect to server' };
+    const res = await authService.login(email, pass);
+    if (res.success && res.data) {
+      setToken(res.data.token);
+      setUser(res.data.user);
     }
+    return res;
   };
 
   const register = async (name: string, email: string, pass: string, defaultCurrency = 'BDT') => {
-    try {
-      const res = await fetch(`${getApiBase()}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password: pass, defaultCurrency }),
-      });
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        return { success: false, message: 'Server returned an invalid response' };
-      }
-      if (data.success && data.data) {
-        localStorage.setItem('zenith_token', data.data.token);
-        setToken(data.data.token);
-        setUser(data.data.user);
-        return { success: true };
-      }
-      return { success: false, message: data.message || 'Registration failed' };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Unable to connect to server' };
+    const res = await authService.register(name, email, pass, defaultCurrency);
+    if (res.success && res.data) {
+      setToken(res.data.token);
+      setUser(res.data.user);
     }
+    return res;
   };
 
-  const socialLogin = async (provider: 'google' | 'facebook', email: string, name?: string) => {
-    try {
-      const res = await fetch(`${getApiBase()}/auth/social-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, email: email.trim(), name: name?.trim() }),
-      });
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        return { success: false, message: 'Server returned an invalid response' };
-      }
-      if (data.success && data.data) {
-        localStorage.setItem('zenith_token', data.data.token);
-        setToken(data.data.token);
-        setUser(data.data.user);
-        return { success: true };
-      }
-      return { success: false, message: data.message || `${provider} sign-in failed` };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Unable to connect to server' };
+  const socialLogin = async (
+    provider: SocialProvider,
+    email: string,
+    name?: string,
+    defaultCurrency = 'BDT'
+  ) => {
+    const res = await authService.socialLogin(provider, email, name, defaultCurrency);
+    if (res.success && res.data) {
+      setToken(res.data.token);
+      setUser(res.data.user);
     }
+    return res;
   };
 
   const updateUserProfile = async (data: { name?: string; defaultCurrency?: string; monthlyBudget?: number }) => {
-    const savedToken = token || localStorage.getItem('zenith_token');
-    if (!savedToken) return { success: false, message: 'Not authenticated' };
-
-    try {
-      const res = await fetch(`${getApiBase()}/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedToken}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (result.success && result.data) {
-        setUser(prev => prev ? { ...prev, ...result.data } : result.data);
-        return { success: true };
-      }
-      return { success: false, message: result.message || 'Failed to update profile' };
-    } catch (err: any) {
-      return { success: false, message: err.message || 'Network error' };
+    const res = await authService.updateProfile(data, token || undefined);
+    if (res.success && res.data) {
+      setUser((prev) => (prev ? { ...prev, ...res.data } : res.data!));
     }
+    return res;
   };
 
   const logout = async () => {
-    localStorage.removeItem('zenith_token');
+    authService.clearToken();
     setToken(null);
     setUser(null);
     setIsProfileModalOpen(false);
+
     try {
       await localDb.transactions.clear();
       await localDb.categories.clear();
       await localDb.accounts.clear();
       await localDb.syncQueue.clear();
     } catch (err) {
-      console.warn('Error clearing local cache on logout:', err);
+      console.warn('[Auth] Error clearing local cache on logout:', err);
     }
   };
 
@@ -218,8 +151,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
+const fallbackAuthContext: AuthContextType = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: false,
+  isProfileModalOpen: false,
+  setIsProfileModalOpen: () => {},
+  login: async () => ({ success: false, message: 'Auth not initialized' }),
+  register: async () => ({ success: false, message: 'Auth not initialized' }),
+  socialLogin: async () => ({ success: false, message: 'Auth not initialized' }),
+  updateUserProfile: async () => ({ success: false, message: 'Auth not initialized' }),
+  refreshUserProfile: async () => {},
+  logout: async () => {},
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    console.warn('[useAuth] Context accessed outside AuthProvider; returning safe fallback.');
+    return fallbackAuthContext;
+  }
   return context;
 };

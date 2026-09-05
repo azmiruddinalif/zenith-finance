@@ -17,7 +17,7 @@
       if (typeof window !== 'undefined' && 'caches' in window) {
         caches.keys().then(function(keys) {
           keys.forEach(function(key) {
-            if (key !== 'zenith-finance-v2') {
+            if (key !== 'zenith-finance-v3') {
               caches.delete(key);
             }
           });
@@ -29,14 +29,29 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Service Worker: Production only; unregister in development to keep Vite HMR fast and clean
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
-            .then((reg) => {
-              reg.update();
-            })
-            .catch((err) => console.log('SW registration error:', err));
-        });
+        const isLocalhost = Boolean(
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.endsWith('.localhost')
+        );
+
+        if (isLocalhost) {
+          // Unregister any active workers during local dev
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
+          });
+        } else {
+          // Register in production
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+              .then((reg) => reg.update())
+              .catch((err) => console.log('SW registration error:', err));
+          });
+        }
       }
     </script>
   </body>
