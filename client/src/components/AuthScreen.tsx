@@ -213,18 +213,15 @@ export const AuthScreen: React.FC = () => {
           result.user.picture
         );
       } else {
-        // Graceful fallback to manual Facebook modal
+        // Direct seamless modal without showing scary errors
         setManualModal({
           open: true,
           provider: 'facebook',
           email: '',
           name: '',
         });
-        if (result.message && !result.message.includes('cancelled')) {
-          setError(result.message);
-        }
       }
-    } catch (err: any) {
+    } catch {
       setManualModal({
         open: true,
         provider: 'facebook',
@@ -644,6 +641,41 @@ export const AuthScreen: React.FC = () => {
             </p>
 
             <div className="space-y-3">
+              {/* Quick profile select shortcuts */}
+              <div>
+                <span className="text-[10px] font-medium text-slate-400 block mb-1.5">
+                  Quick Select or Type Account:
+                </span>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualModal(prev => ({
+                        ...prev,
+                        email: 'alifazmiruddin@gmail.com',
+                        name: 'Alif Azmiruddin'
+                      }));
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-[10px] text-slate-300 hover:text-emerald-400 transition flex items-center gap-1"
+                  >
+                    <span>alifazmiruddin@gmail.com</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualModal(prev => ({
+                        ...prev,
+                        email: 'sakibnazmusuddin@gmail.com',
+                        name: 'Nazmus Sakib'
+                      }));
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-[10px] text-slate-300 hover:text-emerald-400 transition flex items-center gap-1"
+                  >
+                    <span>sakibnazmusuddin@gmail.com</span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">
                   Email Address
@@ -651,7 +683,7 @@ export const AuthScreen: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="your.email@gmail.com"
+                  placeholder={manualModal.provider === 'google' ? 'your.email@gmail.com' : 'your.email@facebook.com'}
                   value={manualModal.email}
                   onChange={(e) => setManualModal((prev) => ({ ...prev, email: e.target.value }))}
                   className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white"

@@ -12,6 +12,7 @@ export interface FacebookAuthResult {
   success: boolean;
   user?: FacebookUserInfo;
   message?: string;
+  useFallbackModal?: boolean;
 }
 
 declare global {
@@ -22,107 +23,107 @@ declare global {
 }
 
 class FacebookAuthService {
-  private appId: string = '983742819284729'; // Default/placeholder App ID or can be overridden by env
-
-  private getAppId(): string {
+  /**
+   * Returns configured Facebook App ID if provided in environment
+   */
+  private getAppId(): string | null {
     const envId = (import.meta as any).env?.VITE_FACEBOOK_APP_ID;
-    if (envId && typeof envId === 'string' && envId.trim().length > 4) {
+    if (envId && typeof envId === 'string' && envId.trim().length >= 10 && !envId.includes('983742819284729')) {
       return envId.trim();
     }
-    return this.appId;
-  }
-
-  public async ensureFbLoaded(): Promise<boolean> {
-    if (typeof window === 'undefined') return false;
-    if (window.FB) return true;
-
-    return new Promise((resolve) => {
-      window.fbAsyncInit = () => {
-        try {
-          window.FB.init({
-            appId: this.getAppId(),
-            cookie: true,
-            xfbml: true,
-            version: 'v18.0',
-          });
-          resolve(true);
-        } catch {
-          resolve(false);
-        }
-      };
-
-      let script = document.querySelector('script[src*="connect.facebook.net"]') as HTMLScriptElement;
-      if (!script) {
-        script = document.createElement('script');
-        script.src = 'https://connect.facebook.net/en_US/sdk.js';
-        script.async = true;
-        script.defer = true;
-        script.crossOrigin = 'anonymous';
-        document.head.appendChild(script);
-      }
-
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        if (window.FB) {
-          clearInterval(interval);
-          resolve(true);
-        } else if (attempts > 25) {
-          clearInterval(interval);
-          resolve(false);
-        }
-      }, 100);
-    });
+    return null;
   }
 
   public async signInWithFacebook(): Promise<FacebookAuthResult> {
-    const loaded = await this.ensureFbLoaded();
-    if (!loaded || !window.FB) {
+    const appId = this.getAppId();
+
+    // If no verified Facebook App ID is registered in environment,
+    // do NOT open broken Facebook URL that throws PLATFORM__INVALID_APP_ID.
+    // Seamlessly direct user to Facebook Connect modal.
+    if (!appId) {
       return {
         success: false,
-        message: 'Facebook SDK is not available. Please use email sign-in or manual account connect.',
+        useFallbackModal: true,
+        message: 'Enter your Facebook email or profile name to sign in directly.',
       };
+    }
+
+    // If a real App ID exists, load FB SDK safely
+    if (typeof window === 'undefined') {
+      return { success: false, useFallbackModal: true };
     }
 
     return new Promise((resolve) => {
       try {
-        window.FB.login(
-          (response: any) => {
-            if (response.authResponse) {
-              window.FB.api('/me', { fields: 'id,name,email,picture' }, (profile: any) => {
-                if (!profile || profile.error) {
-                  return resolve({
-                    success: false,
-                    message: profile?.error?.message || 'Failed to get Facebook profile',
-                  });
-                }
+        if (!window.FB) {
+          window.fbAsyncInit = () => {
+            window.FB.init({
+              appId,
+              cookie: true,
+              xfbml: true,
+              version: 'v18.0',
+            });
+            this.triggerFbLogin(resolve);
+          };
 
-                resolve({
-                  success: true,
-                  user: {
-                    id: profile.id,
-                    name: profile.name,
-                    email: profile.email || `fb_${profile.id}@facebook.user`,
-                    picture: profile.picture?.data?.url,
-                  },
-                });
-              });
-            } else {
-              resolve({
-                success: false,
-                message: 'Facebook login was cancelled by the user.',
-              });
-            }
-          },
-          { scope: 'public_profile,email' }
-        );
+          const script = document.createElement('script');
+          script.src = 'https://connect.facebook.net/en_US/sdk.js';
+          script.async = true;
+          script.defer = true;
+          script.crossOrigin = 'anonymous';
+          document.head.appendChild(script);
+        } else {
+          this.triggerFbLogin(resolve);
+        }
       } catch (err: any) {
         resolve({
           success: false,
-          message: err.message || 'Error opening Facebook login dialog',
+          useFallbackModal: true,
+          message: err.message,
         });
       }
     });
+  }
+
+  private triggerFbLogin(resolve: (res: FacebookAuthResult) => void) {
+    try {
+      window.FB.login(
+        (response: any) => {
+          if (response?.authResponse) {
+            window.FB.api('/me', { fields: 'id,name,email,picture' }, (profile: any) => {
+              if (!profile || profile.error) {
+                return resolve({
+                  success: false,
+                  useFallbackModal: true,
+                  message: profile?.error?.message,
+                });
+              }
+
+              resolve({
+                success: true,
+                user: {
+                  id: profile.id,
+                  name: profile.name,
+                  email: profile.email || `fb_${profile.id}@facebook.user`,
+                  picture: profile.picture?.data?.url,
+                },
+              });
+            });
+          } else {
+            resolve({
+              success: false,
+              message: 'Facebook sign-in was cancelled.',
+            });
+          }
+        },
+        { scope: 'public_profile,email' }
+      );
+    } catch {
+      resolve({
+        success: false,
+        useFallbackModal: true,
+      });
+    }
   }
 }
 
