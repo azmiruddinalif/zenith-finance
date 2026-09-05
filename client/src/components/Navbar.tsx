@@ -18,7 +18,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3 transition-all">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="w-full flex items-center justify-between">
         
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
@@ -34,9 +34,6 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
                 Zenith
-              </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                SaaS
               </span>
             </div>
             <p className="text-[10px] text-slate-400 hidden sm:block">Personal Wealth & Expense Platform</p>

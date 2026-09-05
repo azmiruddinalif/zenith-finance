@@ -25,10 +25,10 @@ const MainWorkspace: React.FC = () => {
       <Navbar />
 
       {/* Main Workspace Layout */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex w-full">
         <Sidebar />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-5xl w-full overflow-x-hidden">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full overflow-x-hidden">
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'transactions' && <TransactionManager />}
           {activeTab === 'analytics' && <AnalyticsView />}

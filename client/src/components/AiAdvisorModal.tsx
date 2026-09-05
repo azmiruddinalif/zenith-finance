@@ -21,7 +21,7 @@ export const AiAdvisorModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-base font-bold text-white">AI Financial Intelligence Engine</h2>
-              <p className="text-xs text-violet-300 font-medium">আর্থিক বিশ্লেষণ ও ব্যয় নিয়ন্ত্রণ পরামর্শ</p>
+              <p className="text-xs text-violet-300 font-medium">Financial Intelligence & Spending Optimization</p>
             </div>
           </div>
           <button
@@ -40,13 +40,13 @@ export const AiAdvisorModal: React.FC = () => {
           <div className="rounded-2xl p-5 bg-gradient-to-r from-violet-950/40 via-purple-900/20 to-slate-900 border border-violet-800/40 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
               <span className="text-xs font-bold uppercase tracking-wider text-violet-300">
-                Health Score (আর্থিক স্কোর)
+                Health Score
               </span>
               <h3 className="text-3xl font-extrabold text-white mt-1">
                 {aiInsight.healthScore} <span className="text-base font-normal text-slate-400">/ 100</span>
               </h3>
               <p className="text-xs text-slate-300 mt-1 max-w-sm">
-                {aiInsight.summaryBn}
+                {aiInsight.summaryEn || aiInsight.summaryBn}
               </p>
             </div>
 
@@ -62,10 +62,10 @@ export const AiAdvisorModal: React.FC = () => {
           <div>
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>Anomalies & Overspending (অতিরিক্ত ব্যয়ের সংকেত)</span>
+              <span>Anomalies & Overspending Signals</span>
             </h4>
             <div className="space-y-2">
-              {aiInsight.anomaliesBn.map((anom, idx) => (
+              {aiInsight.anomalies.map((anom, idx) => (
                 <div 
                   key={idx}
                   className="p-3 rounded-xl bg-amber-950/20 border border-amber-800/30 text-xs text-amber-200 flex items-start gap-2.5"
@@ -81,7 +81,7 @@ export const AiAdvisorModal: React.FC = () => {
           <div>
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
               <Lightbulb className="w-4 h-4 text-emerald-400" />
-              <span>AI Recommendations & Savings (সাশ্রয়ের উপায়)</span>
+              <span>AI Recommendations & Potential Savings</span>
             </h4>
             
             <div className="grid grid-cols-1 gap-3">
@@ -91,13 +91,13 @@ export const AiAdvisorModal: React.FC = () => {
                   className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-violet-500/30 transition space-y-1.5"
                 >
                   <div className="flex items-center justify-between">
-                    <h5 className="text-xs font-bold text-white">{rec.titleBn} ({rec.titleEn})</h5>
+                    <h5 className="text-xs font-bold text-white">{rec.titleEn}</h5>
                     <span className="text-[11px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                       Save ~৳{rec.potentialSavings.toLocaleString()}
                     </span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    {rec.detailBn}
+                    {rec.detailEn}
                   </p>
                 </div>
               ))}

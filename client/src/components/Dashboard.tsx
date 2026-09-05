@@ -125,7 +125,7 @@ export const Dashboard: React.FC = () => {
                   <span className="text-[11px] text-slate-400">Optimal Savings Velocity</span>
                 </div>
                 <p className="text-sm font-medium text-slate-200 mt-0.5 group-hover:text-emerald-300 transition line-clamp-1">
-                  {aiInsight.summaryBn}
+                  {aiInsight.summaryEn || aiInsight.summaryBn}
                 </p>
               </div>
             </div>

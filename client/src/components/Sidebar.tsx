@@ -3,7 +3,7 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Receipt, PieChart, Target, 
-  Repeat, UploadCloud, Sparkles, ShieldCheck 
+  Repeat, UploadCloud, Sparkles 
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -67,19 +67,6 @@ export const Sidebar: React.FC = () => {
           <Sparkles className="w-4 h-4 text-violet-400" />
           <span>AI Spending Advisory</span>
         </button>
-      </div>
-
-      {/* Security & Offline Guarantee Banner */}
-      <div className="mt-auto pt-6">
-        <div className="rounded-xl p-3.5 bg-slate-900/60 border border-slate-800 text-xs text-slate-400">
-          <div className="flex items-center gap-2 text-emerald-400 font-medium mb-1">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Zero-Data Loss</span>
-          </div>
-          <p className="text-[11px] leading-relaxed text-slate-400">
-            Offline transactions are held securely in IndexedDB and synchronized with PostgreSQL when online.
-          </p>
-        </div>
       </div>
 
           {/* User Profile Card in Sidebar */}

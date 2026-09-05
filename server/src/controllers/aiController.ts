@@ -60,39 +60,39 @@ export const getAiSpendingAnalysis = async (req: AuthRequest, res: Response) => 
       if (c.limit > 0 && c.amount > c.limit) {
         const over = c.amount - c.limit;
         anomalies.push(`Over budget in ${c.name}: exceeded limit by ৳${over.toLocaleString()}.`);
-        anomaliesBn.push(`${c.name}-এ বাজেটের চেয়ে ৳${over.toLocaleString()} বেশি খরচ হয়েছে।`);
+        anomaliesBn.push(`Exceeded budget limit in ${c.name} by ৳${over.toLocaleString()}.`);
       }
     });
 
     if (totalExpense > prevExpense * 1.25 && prevExpense > 0) {
       anomalies.push(`Total spend increased by ${Math.round(((totalExpense - prevExpense) / prevExpense) * 100)}% compared to last month.`);
-      anomaliesBn.push(`গত মাসের তুলনায় মোট খরচ প্রায় ${Math.round(((totalExpense - prevExpense) / prevExpense) * 100)}% বৃদ্ধি পেয়েছে।`);
+      anomaliesBn.push(`Total expense increased by ${Math.round(((totalExpense - prevExpense) / prevExpense) * 100)}% compared to last month.`);
     }
 
     if (anomalies.length === 0) {
       anomalies.push('Spending is well-disciplined within healthy safety margins.');
-      anomaliesBn.push('আপনার ব্যয় নিয়ন্ত্রণে রয়েছে এবং চমৎকারভাবে বাজেট অনুসরণ করছেন।');
+      anomaliesBn.push('Spending is well-disciplined within healthy safety margins.');
     }
 
     const recommendations = [
       {
         titleEn: `Optimize ${topCategory.name}`,
-        titleBn: `${topCategory.name} খাতে খরচ কমানো`,
+        titleBn: `Optimize ${topCategory.name}`,
         detailEn: `${topCategory.name} is your highest expense category at ৳${topCategory.amount.toLocaleString()}.`,
-        detailBn: `এই মাসে ${topCategory.name} খাতে সর্বোচ্চ ৳${topCategory.amount.toLocaleString()} খরচ হয়েছে।`,
+        detailBn: `${topCategory.name} is your highest expense category at ৳${topCategory.amount.toLocaleString()}.`,
         potentialSavings: Math.round(topCategory.amount * 0.15),
       },
       {
         titleEn: 'Automate Emergency Fund Transfer',
-        titleBn: 'জরুরি তহবিলে স্বয়ংক্রিয় সঞ্চয়',
+        titleBn: 'Automate Emergency Fund Transfer',
         detailEn: `Aim to set aside ৳${Math.round(totalIncome * 0.2).toLocaleString()} into a high-yield emergency reserve.`,
-        detailBn: `আপনার মাসিক আয়ের প্রায় ২০% (৳${Math.round(totalIncome * 0.2).toLocaleString()}) সঞ্চয় তহবিলে স্থানান্তর করতে পারেন।`,
+        detailBn: `Aim to set aside ৳${Math.round(totalIncome * 0.2).toLocaleString()} into a high-yield emergency reserve.`,
         potentialSavings: Math.round(totalIncome * 0.2),
       },
     ];
 
     const summaryEn = `Health Score is ${healthScore}/100. Total income ৳${totalIncome.toLocaleString()} vs expenses ৳${totalExpense.toLocaleString()}.`;
-    const summaryBn = `আপনার আর্থিক স্বাস্থ্য স্কোর ${healthScore}/100। মোট আয় ৳${totalIncome.toLocaleString()} এবং ব্যয় ৳${totalExpense.toLocaleString()}।`;
+    const summaryBn = `Financial health score is ${healthScore}/100. Total income ৳${totalIncome.toLocaleString()} vs expenses ৳${totalExpense.toLocaleString()}.`;
 
     res.json({
       success: true,
