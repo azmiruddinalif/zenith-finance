@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, Lock, Mail, User, Globe, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowRight, Lock, Mail, User, Globe, X, CheckCircle2, AlertCircle, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../services/api';
+
+export interface SavedSocialAccount {
+  email: string;
+  name: string;
+  provider: 'google' | 'facebook';
+  lastUsed: number;
+}
+
+const STORAGE_KEY = 'zenith_saved_social_accounts';
 
 export const AuthScreen: React.FC = () => {
   const { login, register, socialLogin } = useAuth();
@@ -14,18 +23,60 @@ export const AuthScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
+  // Saved accounts across sessions on this device
+  const [savedAccounts, setSavedAccounts] = useState<SavedSocialAccount[]>([]);
+
   // Social account picker modal state
   const [socialModal, setSocialModal] = useState<{
     open: boolean;
     provider: 'google' | 'facebook';
-    customEmail: string;
-    customName: string;
+    mode: 'choose' | 'new';
+    inputEmail: string;
+    inputName: string;
   }>({
     open: false,
     provider: 'google',
-    customEmail: '',
-    customName: '',
+    mode: 'new',
+    inputEmail: '',
+    inputName: '',
   });
+
+  // Load saved accounts on component mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSavedAccounts(parsed);
+        }
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+  }, []);
+
+  const saveAccountToStorage = (account: SavedSocialAccount) => {
+    setSavedAccounts(prev => {
+      const filtered = prev.filter(a => a.email.toLowerCase() !== account.email.toLowerCase());
+      const updated = [account, ...filtered].slice(0, 5); // Keep up to 5 accounts
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const removeAccountFromStorage = (targetEmail: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedAccounts(prev => {
+      const updated = prev.filter(a => a.email.toLowerCase() !== targetEmail.toLowerCase());
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,25 +99,38 @@ export const AuthScreen: React.FC = () => {
 
   const handleOpenSocialModal = (provider: 'google' | 'facebook') => {
     setError(null);
+    const providerAccounts = savedAccounts.filter(a => a.provider === provider);
     setSocialModal({
       open: true,
       provider,
-      customEmail: provider === 'google' ? 'alifazmiruddin@gmail.com' : 'azmir.facebook@gmail.com',
-      customName: 'Azmir Uddin',
+      mode: providerAccounts.length > 0 ? 'choose' : 'new',
+      inputEmail: '',
+      inputName: '',
     });
   };
 
-  const handleExecuteSocialLogin = async (provider: 'google' | 'facebook', targetEmail: string, targetName: string) => {
-    if (!targetEmail || !targetEmail.includes('@')) {
+  const handleExecuteSocialLogin = async (provider: 'google' | 'facebook', targetEmail: string, targetName?: string) => {
+    const cleanEmail = targetEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       setError('Please provide a valid email address');
       return;
     }
+
+    const cleanName = targetName?.trim() || cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
     setError(null);
     setSocialLoading(provider);
-    setSocialModal(prev => ({ ...prev, open: false }));
 
-    const res = await socialLogin(provider, targetEmail, targetName);
-    if (!res.success) {
+    const res = await socialLogin(provider, cleanEmail, cleanName);
+    if (res.success) {
+      saveAccountToStorage({
+        email: cleanEmail,
+        name: cleanName,
+        provider,
+        lastUsed: Date.now(),
+      });
+      setSocialModal(prev => ({ ...prev, open: false }));
+    } else {
       setError(res.message || `Failed to sign in with ${provider}`);
     }
     setSocialLoading(null);
@@ -95,7 +159,7 @@ export const AuthScreen: React.FC = () => {
             Zenith Finance
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Production-grade personal wealth & expense management platform
+            Intelligent personal wealth & offline-first expense management
           </p>
         </div>
 
@@ -123,15 +187,15 @@ export const AuthScreen: React.FC = () => {
           </button>
         </div>
 
-        {/* 1-Click Social Sign-In Buttons */}
-        <div className="grid grid-cols-2 gap-2.5 mb-2">
+        {/* Multi-User Social Sign-In Buttons */}
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
           
-          {/* Google Button - 1 Click Instant Sign In */}
+          {/* Google Button */}
           <button
             type="button"
             id="btn-google-signin"
             disabled={Boolean(socialLoading) || loading}
-            onClick={() => handleExecuteSocialLogin('google', 'alifazmiruddin@gmail.com', 'Alif Azmiruddin')}
+            onClick={() => handleOpenSocialModal('google')}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-emerald-500/50 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
           >
             <svg className="w-4 h-4 shrink-0 transition group-hover:scale-110" viewBox="0 0 24 24">
@@ -140,36 +204,78 @@ export const AuthScreen: React.FC = () => {
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
-            <span>{socialLoading === 'google' ? 'Connecting...' : 'Google'}</span>
+            <span>{socialLoading === 'google' ? 'Signing in...' : 'Sign in with Google'}</span>
           </button>
 
-          {/* Facebook Button - 1 Click Instant Sign In */}
+          {/* Facebook Button */}
           <button
             type="button"
             id="btn-facebook-signin"
             disabled={Boolean(socialLoading) || loading}
-            onClick={() => handleExecuteSocialLogin('facebook', 'azmir.facebook@gmail.com', 'Azmir Uddin')}
+            onClick={() => handleOpenSocialModal('facebook')}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-emerald-500/50 text-xs font-semibold text-white transition active:scale-[0.98] shadow-sm group"
           >
             <svg className="w-4 h-4 shrink-0 fill-[#1877F2] transition group-hover:scale-110" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
             </svg>
-            <span>{socialLoading === 'facebook' ? 'Connecting...' : 'Facebook'}</span>
+            <span>{socialLoading === 'facebook' ? 'Signing in...' : 'Sign in with Facebook'}</span>
           </button>
 
         </div>
 
-        {/* 1-Click Profile Helper & Switcher */}
-        <div className="flex items-center justify-between mb-4 px-1 text-[11px] text-slate-400">
-          <span>1-click Google: <strong className="text-slate-300">alifazmiruddin</strong></span>
-          <button
-            type="button"
-            onClick={() => handleOpenSocialModal('google')}
-            className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition"
-          >
-            Switch account
-          </button>
-        </div>
+        {/* Returning Accounts Quick Switcher (if any saved on this browser) */}
+        {savedAccounts.length > 0 && (
+          <div className="mb-4 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+            <div className="flex items-center justify-between mb-1.5 px-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                Recent Accounts on this device:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleOpenSocialModal('google')}
+                className="text-[10px] text-emerald-400 hover:text-emerald-300 transition"
+              >
+                + Add Another
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {savedAccounts.slice(0, 2).map((acc) => (
+                <div
+                  key={acc.email}
+                  onClick={() => handleExecuteSocialLogin(acc.provider, acc.email, acc.name)}
+                  className="p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-emerald-500/40 flex items-center justify-between cursor-pointer transition group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-slate-950 shrink-0">
+                      {acc.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-200 group-hover:text-emerald-300 truncate transition">
+                        {acc.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {acc.email} ({acc.provider})
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] text-emerald-400 font-medium group-hover:underline">
+                      Sign in →
+                    </span>
+                    <button
+                      type="button"
+                      title="Forget this account"
+                      onClick={(e) => removeAccountFromStorage(acc.email, e)}
+                      className="text-slate-500 hover:text-rose-400 p-1 transition"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Divider: Or continue with email */}
         <div className="relative my-4">
@@ -178,7 +284,7 @@ export const AuthScreen: React.FC = () => {
           </div>
           <div className="relative flex justify-center text-[10px] uppercase">
             <span className="bg-[#0b101b] px-2 text-slate-500 font-semibold tracking-wider">
-              Or continue with email
+              Or continue with email & password
             </span>
           </div>
         </div>
@@ -202,8 +308,8 @@ export const AuthScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Email & Password Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           
           {!isLogin && (
             <div>
@@ -215,7 +321,7 @@ export const AuthScreen: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Azmir Uddin"
+                  placeholder="Alex Morgan"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
@@ -295,20 +401,20 @@ export const AuthScreen: React.FC = () => {
 
       </div>
 
-      {/* Social Identity Custom Email Switcher Modal */}
+      {/* Universal Multi-User Social Identity Dialog */}
       {socialModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-sm glass-panel-elevated rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
             
             <button 
               onClick={() => setSocialModal(prev => ({ ...prev, open: false }))}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg"
+              className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg transition"
             >
               <X className="w-4 h-4" />
             </button>
 
             {/* Provider Header */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-5">
               {socialModal.provider === 'google' ? (
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md">
                   <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -327,60 +433,141 @@ export const AuthScreen: React.FC = () => {
               )}
               <div>
                 <h3 className="text-sm font-bold text-white capitalize">
-                  Continue with {socialModal.provider}
+                  {socialModal.provider === 'google' ? 'Sign in with Google' : 'Log in with Facebook'}
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  Select or confirm your profile to sign in
+                  to continue to Zenith Finance
                 </p>
               </div>
             </div>
 
-            {/* Quick 1-Click Profile Pill */}
-            <div className="mb-4">
-              <button
-                type="button"
-                id="btn-social-quick-profile"
-                onClick={() => handleExecuteSocialLogin(socialModal.provider, 'alifazmiruddin@gmail.com', 'Alif Azmiruddin')}
-                className="w-full p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700 hover:border-emerald-500/50 text-left transition flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-slate-950 shadow">
-                    A
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white group-hover:text-emerald-300 transition">
-                      Alif Azmiruddin
-                    </p>
-                    <p className="text-[11px] text-slate-400">
-                      alifazmiruddin@gmail.com
-                    </p>
-                  </div>
+            {/* Account Chooser Mode */}
+            {socialModal.mode === 'choose' && savedAccounts.filter(a => a.provider === socialModal.provider).length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-slate-300">Choose an account:</p>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {savedAccounts.filter(a => a.provider === socialModal.provider).map((acc) => (
+                    <button
+                      key={acc.email}
+                      type="button"
+                      onClick={() => handleExecuteSocialLogin(socialModal.provider, acc.email, acc.name)}
+                      className="w-full p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700 hover:border-emerald-500/50 text-left transition flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-slate-950 shrink-0 shadow">
+                          {acc.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white group-hover:text-emerald-300 transition truncate">
+                            {acc.name}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {acc.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 opacity-0 group-hover:opacity-100 transition" />
+                        <button
+                          type="button"
+                          title="Remove from saved accounts"
+                          onClick={(e) => removeAccountFromStorage(acc.email, e)}
+                          className="text-slate-500 hover:text-rose-400 p-1.5 transition ml-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 opacity-0 group-hover:opacity-100 transition" />
-              </button>
-            </div>
 
-            {/* Manual Email Input for Custom Account */}
-            <div className="pt-2 border-t border-slate-800/80">
-              <p className="text-[11px] text-slate-400 mb-2">Or connect with another {socialModal.provider} email:</p>
-              <div className="space-y-2">
-                <input
-                  type="email"
-                  placeholder="Enter email address"
-                  value={socialModal.customEmail}
-                  onChange={(e) => setSocialModal(prev => ({ ...prev, customEmail: e.target.value }))}
-                  className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white"
-                />
-                <button
-                  type="button"
-                  id="btn-social-confirm-login"
-                  onClick={() => handleExecuteSocialLogin(socialModal.provider, socialModal.customEmail, socialModal.customName)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition"
-                >
-                  Authorize & Sign In
-                </button>
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setSocialModal(prev => ({ ...prev, mode: 'new' }))}
+                    className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Use another account</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* New / Any User Account Sign-In Form */
+              <div className="space-y-3">
+                {savedAccounts.filter(a => a.provider === socialModal.provider).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSocialModal(prev => ({ ...prev, mode: 'choose' }))}
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 mb-2 transition"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to saved accounts</span>
+                  </button>
+                )}
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                    {socialModal.provider === 'google' ? 'Google Email' : 'Facebook Email or Username'}
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    placeholder={socialModal.provider === 'google' ? 'user@gmail.com' : 'user@facebook.com'}
+                    value={socialModal.inputEmail}
+                    onChange={(e) => setSocialModal(prev => ({ ...prev, inputEmail: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleExecuteSocialLogin(socialModal.provider, socialModal.inputEmail, socialModal.inputName);
+                      }
+                    }}
+                    className="w-full glass-input rounded-xl px-3 py-2.5 text-xs text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+                    Full Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sarah Jenkins"
+                    value={socialModal.inputName}
+                    onChange={(e) => setSocialModal(prev => ({ ...prev, inputName: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleExecuteSocialLogin(socialModal.provider, socialModal.inputEmail, socialModal.inputName);
+                      }
+                    }}
+                    className="w-full glass-input rounded-xl px-3 py-2.5 text-xs text-white"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    id="btn-social-confirm-login"
+                    disabled={!socialModal.inputEmail}
+                    onClick={() => handleExecuteSocialLogin(socialModal.provider, socialModal.inputEmail, socialModal.inputName)}
+                    className={`w-full py-3 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 ${
+                      socialModal.provider === 'google'
+                        ? 'bg-white hover:bg-slate-100 text-slate-900 shadow-white/10'
+                        : 'bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-blue-500/20'
+                    }`}
+                  >
+                    <span>
+                      {socialLoading ? 'Authorizing...' : `Continue with ${socialModal.provider === 'google' ? 'Google' : 'Facebook'}`}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-center text-slate-500 pt-1">
+                  Connects your {socialModal.provider === 'google' ? 'Google' : 'Facebook'} profile with isolated multi-user cloud sync
+                </p>
+              </div>
+            )}
 
           </div>
         </div>

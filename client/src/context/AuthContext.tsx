@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { localDb } from '../services/offlineDb';
 
 export interface UserProfile {
   id: string;
@@ -16,7 +17,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, pass: string, currency?: string) => Promise<{ success: boolean; message?: string }>;
   socialLogin: (provider: 'google' | 'facebook', email: string, name?: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser(data.data);
           setToken(savedToken);
         } else {
-          logout();
+          await logout();
         }
       } catch {
         // If server temporarily offline, retain saved session
@@ -139,10 +140,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('zenith_token');
     setToken(null);
     setUser(null);
+    try {
+      await localDb.transactions.clear();
+      await localDb.categories.clear();
+      await localDb.accounts.clear();
+      await localDb.syncQueue.clear();
+    } catch (err) {
+      console.warn('Error clearing local cache on logout:', err);
+    }
   };
 
   return (
