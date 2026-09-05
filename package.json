@@ -10,7 +10,9 @@
     "client:build": "npm run build --prefix client",
     "electron:dev": "electron ./electron",
     "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"cyan.bold,green.bold\" \"npm run server:dev\" \"npm run client:dev\"",
-    "start": "npm run dev"
+    "start": "npm run dev",
+    "studio": "npm run prisma:studio --prefix server",
+    "prisma:studio": "npm run prisma:studio --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
