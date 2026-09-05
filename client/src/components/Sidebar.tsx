@@ -1,5 +1,6 @@
 import React from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Receipt, PieChart, Target, 
   Repeat, UploadCloud, Sparkles, ShieldCheck 
@@ -7,6 +8,7 @@ import {
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, setIsAiModalOpen, setIsImportModalOpen } = useFinance();
+  const { user, setIsProfileModalOpen } = useAuth();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -80,6 +82,25 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
+          {/* User Profile Card in Sidebar */}
+      <div className="mt-auto pt-4 border-t border-slate-800/80">
+        <button
+          onClick={() => setIsProfileModalOpen(true)}
+          className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/70 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/40 text-left transition group"
+        >
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-slate-950 shadow shrink-0">
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-white group-hover:text-emerald-300 transition truncate">
+              {user?.name || 'My Profile'}
+            </p>
+            <p className="text-[10px] text-slate-400 truncate">
+              {user?.email || 'View Profile'}
+            </p>
+          </div>
+        </button>
+      </div>
     </aside>
   );
 };

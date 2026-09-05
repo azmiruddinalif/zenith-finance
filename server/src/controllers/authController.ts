@@ -228,3 +228,21 @@ export const socialLogin = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: error.message || 'Social sign-in failed' });
   }
 };
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, defaultCurrency, monthlyBudget } = req.body;
+    const updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        ...(name && { name: name.trim() }),
+        ...(defaultCurrency && { defaultCurrency }),
+        ...(monthlyBudget !== undefined && { monthlyBudget: Number(monthlyBudget) }),
+      },
+      select: { id: true, name: true, email: true, defaultCurrency: true, monthlyBudget: true, createdAt: true },
+    });
+    res.json({ success: true, message: 'Profile updated successfully', data: updated });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

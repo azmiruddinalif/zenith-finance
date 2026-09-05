@@ -13,6 +13,7 @@ import { QuickAddModal } from './components/QuickAddModal';
 import { BankImportModal } from './components/BankImportModal';
 import { AiAdvisorModal } from './components/AiAdvisorModal';
 import { AuthScreen } from './components/AuthScreen';
+import { UserProfileModal } from './components/UserProfileModal';
 
 const MainWorkspace: React.FC = () => {
   const { activeTab, notification } = useFinance();
@@ -42,6 +43,7 @@ const MainWorkspace: React.FC = () => {
       <QuickAddModal />
       <BankImportModal />
       <AiAdvisorModal />
+      <UserProfileModal />
 
       {/* Toast Notification */}
       {notification && (

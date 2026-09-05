@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 import { 
-  TrendingUp, TrendingDown, Wallet, PiggyBank, 
+  TrendingUp, TrendingDown, Wallet, PiggyBank, User, 
   ArrowUpRight, ArrowDownRight, AlertCircle, Sparkles, CheckCircle2, ChevronRight 
 } from 'lucide-react';
 import { 
@@ -31,6 +32,7 @@ export const Dashboard: React.FC = () => {
     formatMoney, transactions, accounts, budget, 
     reminders, aiInsight, setActiveTab, setIsAiModalOpen, setIsQuickAddOpen 
   } = useFinance();
+  const { user, setIsProfileModalOpen } = useAuth();
 
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 
@@ -68,7 +70,41 @@ export const Dashboard: React.FC = () => {
   const totalCategoryExpense = pieData.reduce((acc, c) => acc + c.value, 0);
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-8">
+        <div className="space-y-6 pb-20 lg:pb-8">
+
+      {/* User Welcome & Profile Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl glass-panel-elevated border border-slate-800/90 shadow-xl bg-gradient-to-r from-slate-900/90 via-[#0a0f1d]/90 to-slate-900/90">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div 
+            onClick={() => setIsProfileModalOpen(true)}
+            className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500 flex items-center justify-center text-lg font-black text-slate-950 shadow-md ring-2 ring-emerald-400/30 cursor-pointer hover:scale-105 transition shrink-0"
+            title="Click to view full profile"
+          >
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight truncate">
+                Welcome back, {user?.name || 'User'}!
+              </h1>
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Verified
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
+              Signed in as <strong className="text-slate-200 font-medium">{user?.email}</strong> • Cloud Synced with PostgreSQL
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsProfileModalOpen(true)}
+          className="self-start sm:self-center shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500/40 transition shadow-sm"
+        >
+          <User className="w-3.5 h-3.5 text-emerald-400" />
+          <span>View Profile</span>
+        </button>
+      </div>
 
       {/* Top Banner: AI Financial Health Score & Quick Insight */}
       {aiInsight && (

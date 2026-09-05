@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string;
   defaultCurrency: string;
   monthlyBudget: number;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -14,9 +15,13 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isProfileModalOpen: boolean;
+  setIsProfileModalOpen: (open: boolean) => void;
   login: (email: string, pass: string) => Promise<{ success: boolean; message?: string }>;
   register: (name: string, email: string, pass: string, currency?: string) => Promise<{ success: boolean; message?: string }>;
   socialLogin: (provider: 'google' | 'facebook', email: string, name?: string) => Promise<{ success: boolean; message?: string }>;
+  updateUserProfile: (data: { name?: string; defaultCurrency?: string; monthlyBudget?: number }) => Promise<{ success: boolean; message?: string }>;
+  refreshUserProfile: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -34,6 +39,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('zenith_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+
+  const fetchCurrentUser = async (savedToken: string) => {
+    try {
+      const res = await fetch(`${getApiBase()}/auth/me`, {
+        headers: { Authorization: `Bearer ${savedToken}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setUser(data.data);
+        setToken(savedToken);
+        return true;
+      } else {
+        await logout();
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  };
 
   // Hydrate user profile on load
   useEffect(() => {
@@ -43,27 +68,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
         return;
       }
-
-      try {
-        const res = await fetch(`${getApiBase()}/auth/me`, {
-          headers: { Authorization: `Bearer ${savedToken}` },
-        });
-        const data = await res.json();
-        if (data.success && data.data) {
-          setUser(data.data);
-          setToken(savedToken);
-        } else {
-          await logout();
-        }
-      } catch {
-        // If server temporarily offline, retain saved session
-      } finally {
-        setIsLoading(false);
-      }
+      await fetchCurrentUser(savedToken);
+      setIsLoading(false);
     };
 
     hydrateUser();
   }, []);
+
+  const refreshUserProfile = async () => {
+    const savedToken = token || localStorage.getItem('zenith_token');
+    if (savedToken) {
+      await fetchCurrentUser(savedToken);
+    }
+  };
 
   const login = async (email: string, pass: string) => {
     try {
@@ -140,10 +157,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateUserProfile = async (data: { name?: string; defaultCurrency?: string; monthlyBudget?: number }) => {
+    const savedToken = token || localStorage.getItem('zenith_token');
+    if (!savedToken) return { success: false, message: 'Not authenticated' };
+
+    try {
+      const res = await fetch(`${getApiBase()}/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${savedToken}`,
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        setUser(prev => prev ? { ...prev, ...result.data } : result.data);
+        return { success: true };
+      }
+      return { success: false, message: result.message || 'Failed to update profile' };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Network error' };
+    }
+  };
+
   const logout = async () => {
     localStorage.removeItem('zenith_token');
     setToken(null);
     setUser(null);
+    setIsProfileModalOpen(false);
     try {
       await localDb.transactions.clear();
       await localDb.categories.clear();
@@ -161,9 +203,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         token,
         isAuthenticated: Boolean(token),
         isLoading,
+        isProfileModalOpen,
+        setIsProfileModalOpen,
         login,
         register,
         socialLogin,
+        updateUserProfile,
+        refreshUserProfile,
         logout,
       }}
     >

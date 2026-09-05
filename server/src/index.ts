@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 
 import { authenticateToken } from './middleware/auth';
-import { register, login, getMe, socialLogin } from './controllers/authController';
+import { register, login, getMe, socialLogin, updateProfile } from './controllers/authController';
 import {
   getTransactions,
   createTransaction,
@@ -79,6 +79,7 @@ app.post('/api/auth/social-login', socialLogin);
 app.use('/api', authenticateToken as any);
 
 app.get('/api/auth/me', getMe as any);
+app.put('/api/auth/profile', updateProfile as any);
 app.get('/api/dashboard', getDashboardSummary as any);
 
 app.get('/api/transactions', getTransactions as any);

@@ -3,7 +3,7 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { 
   Sparkles, Plus, Wifi, WifiOff, UploadCloud, 
-  ChevronDown, LogOut, User 
+  ChevronDown, LogOut, User, RefreshCw, ShieldCheck, ChevronRight 
 } from 'lucide-react';
 import { CURRENCY_SYMBOLS } from '../services/api';
 
@@ -13,7 +13,7 @@ export const Navbar: React.FC = () => {
     setIsQuickAddOpen, setIsAiModalOpen, setIsImportModalOpen 
   } = useFinance();
 
-  const { user, logout } = useAuth();
+  const { user, logout, setIsProfileModalOpen } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
 
   return (
@@ -104,33 +104,83 @@ export const Navbar: React.FC = () => {
             <span className="hidden md:inline">Quick Add</span>
           </button>
 
-          {/* User Profile Pill & Dropdown */}
+          {/* User Profile Pill & Rich Dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-1 pl-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition cursor-pointer"
+              className="flex items-center gap-2 p-1 pl-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition cursor-pointer group"
             >
-              <span className="text-xs font-semibold text-slate-200 hidden md:inline max-w-[100px] truncate">
+              <span className="text-xs font-semibold text-slate-200 hidden md:inline max-w-[120px] truncate group-hover:text-emerald-300 transition">
                 {user?.name || 'Account'}
               </span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-400">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-slate-950 shadow">
                 {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5" />}
               </div>
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl glass-panel-elevated p-2 border border-slate-700 shadow-2xl z-50 animate-fade-in">
-                <div className="p-2 border-b border-slate-800">
-                  <p className="text-xs font-bold text-white truncate">{user?.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
-                </div>
-                <button
-                  onClick={() => { setShowUserMenu(false); logout(); }}
-                  className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition mt-1"
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl glass-panel-elevated p-3 border border-slate-700 shadow-2xl z-50 animate-fade-in space-y-2">
+                
+                {/* User Info Card */}
+                <div 
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setIsProfileModalOpen(true);
+                  }}
+                  className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center gap-3 cursor-pointer hover:border-emerald-500/40 transition group"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-slate-950 shadow shrink-0">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white group-hover:text-emerald-300 truncate transition">
+                      {user?.name || 'User Profile'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                  </div>
+                </div>
+
+                {/* View Full Profile Action */}
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    setIsProfileModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white transition group"
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>View Profile & Settings</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition" />
                 </button>
+
+                {/* Switch Account */}
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-slate-800 transition"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Switch Account</span>
+                </button>
+
+                {/* Sign Out */}
+                <div className="pt-1 border-t border-slate-800">
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+
               </div>
             )}
           </div>
