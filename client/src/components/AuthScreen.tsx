@@ -24,6 +24,8 @@ export const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState<string>('');
   const [currency, setCurrency] = useState<string>('BDT');
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [showOriginNotice, setShowOriginNotice] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
@@ -127,13 +129,16 @@ export const AuthScreen: React.FC = () => {
   ) => {
     const cleanEmail = targetEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      setError('Please provide a valid email address');
+      const err = 'Please provide a valid email address';
+      setError(err);
+      setModalError(err);
       return;
     }
 
     const cleanName = targetName?.trim() || cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
     setError(null);
+    setModalError(null);
     setSocialLoading(provider);
 
     const res = await socialLogin(provider, cleanEmail, cleanName);
@@ -148,7 +153,9 @@ export const AuthScreen: React.FC = () => {
       setManualModal((prev) => ({ ...prev, open: false }));
       setIsSwitcherOpen(false);
     } else {
-      setError(res.message || `Failed to sign in with ${provider}`);
+      const errMsg = res.message || `Failed to sign in with ${provider}`;
+      setError(errMsg);
+      setModalError(errMsg);
     }
     setSocialLoading(null);
   };
@@ -159,6 +166,8 @@ export const AuthScreen: React.FC = () => {
    */
   const handleGoogleSignIn = async () => {
     setError(null);
+    setModalError(null);
+    setShowOriginNotice(false);
     setSocialLoading('google');
 
     try {
@@ -172,23 +181,34 @@ export const AuthScreen: React.FC = () => {
           result.user.picture
         );
       } else {
-        const msg = result.message || 'Google Sign-In popup could not complete.';
-        setError(msg);
-        // Seamlessly open fallback modal so the user is never stuck
+        const msg = result.message || '';
+        const isOriginIssue =
+          msg.toLowerCase().includes('origin') ||
+          msg.toLowerCase().includes('closed') ||
+          msg.toLowerCase().includes('blocked') ||
+          msg.toLowerCase().includes('policy');
+
+        if (isOriginIssue) {
+          setShowOriginNotice(true);
+        }
+
+        const candidateEmail = lastActiveAccount?.provider === 'google' ? lastActiveAccount.email : '';
+        const candidateName = lastActiveAccount?.provider === 'google' ? lastActiveAccount.name : '';
+
         setManualModal({
           open: true,
           provider: 'google',
-          email: '',
-          name: '',
+          email: candidateEmail,
+          name: candidateName,
         });
       }
-    } catch (err: any) {
-      setError(err.message || 'Google Sign-In popup closed.');
+    } catch {
+      setShowOriginNotice(true);
       setManualModal({
         open: true,
         provider: 'google',
-        email: '',
-        name: '',
+        email: lastActiveAccount?.provider === 'google' ? lastActiveAccount.email : '',
+        name: lastActiveAccount?.provider === 'google' ? lastActiveAccount.name : '',
       });
     } finally {
       setSocialLoading(null);
@@ -200,6 +220,7 @@ export const AuthScreen: React.FC = () => {
    */
   const handleFacebookSignIn = async () => {
     setError(null);
+    setModalError(null);
     setSocialLoading('facebook');
 
     try {
@@ -213,12 +234,14 @@ export const AuthScreen: React.FC = () => {
           result.user.picture
         );
       } else {
-        // Direct seamless modal without showing scary errors
+        const candidateEmail = lastActiveAccount?.provider === 'facebook' ? lastActiveAccount.email : '';
+        const candidateName = lastActiveAccount?.provider === 'facebook' ? lastActiveAccount.name : '';
+
         setManualModal({
           open: true,
           provider: 'facebook',
-          email: '',
-          name: '',
+          email: candidateEmail,
+          name: candidateName,
         });
       }
     } catch {
@@ -621,97 +644,179 @@ export const AuthScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Manual / Fallback Account Modal */}
+      {/* 1-Tap Social Account Modal (Instant Access on Mobile & Web) */}
       {manualModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-[#0b101b] border border-slate-700/80 p-5 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-[#0b101b] border border-slate-700/80 p-5 sm:p-6 shadow-2xl relative">
             <button
               type="button"
-              onClick={() => setManualModal((prev) => ({ ...prev, open: false }))}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white transition"
+              onClick={() => {
+                setManualModal((prev) => ({ ...prev, open: false }));
+                setModalError(null);
+                setShowOriginNotice(false);
+              }}
+              className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg transition"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-sm font-bold text-white mb-1 capitalize">
-              Connect {manualModal.provider} Account
-            </h3>
-            <p className="text-[11px] text-slate-400 mb-4">
-              Enter your {manualModal.provider} details to sign in securely:
-            </p>
-
-            <div className="space-y-3">
-              {/* Quick profile select shortcuts */}
-              <div>
-                <span className="text-[10px] font-medium text-slate-400 block mb-1.5">
-                  Quick Select or Type Account:
-                </span>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setManualModal(prev => ({
-                        ...prev,
-                        email: 'alifazmiruddin@gmail.com',
-                        name: 'Alif Azmiruddin'
-                      }));
-                    }}
-                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-[10px] text-slate-300 hover:text-emerald-400 transition flex items-center gap-1"
-                  >
-                    <span>alifazmiruddin@gmail.com</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setManualModal(prev => ({
-                        ...prev,
-                        email: 'sakibnazmusuddin@gmail.com',
-                        name: 'Nazmus Sakib'
-                      }));
-                    }}
-                    className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-[10px] text-slate-300 hover:text-emerald-400 transition flex items-center gap-1"
-                  >
-                    <span>sakibnazmusuddin@gmail.com</span>
-                  </button>
+            <div className="flex items-center gap-2.5 mb-3">
+              {manualModal.provider === 'google' ? (
+                <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm shrink-0">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
                 </div>
+              ) : (
+                <div className="w-8 h-8 rounded-xl bg-[#1877F2] flex items-center justify-center shadow-sm shrink-0">
+                  <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </div>
+              )}
+              <div>
+                <h3 className="text-sm font-bold text-white capitalize">
+                  Sign In with {manualModal.provider === 'google' ? 'Google' : 'Facebook'}
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Instant account access on mobile & web
+                </p>
               </div>
+            </div>
+
+            {/* Google Console Origin mismatch tip (if origin was blocked) */}
+            {showOriginNotice && manualModal.provider === 'google' && (
+              <div className="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 leading-relaxed">
+                <p className="font-semibold text-amber-300 mb-0.5 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Google Cloud Whitelist Note:</span>
+                </p>
+                <span>To enable Google's direct popup on mobile, add this domain in Google Cloud Console &gt; Authorized JavaScript Origins:</span>
+                <code className="block mt-1 px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 font-mono text-[10px] break-all select-all">
+                  {typeof window !== 'undefined' ? window.location.origin : 'https://client-rust-tau.vercel.app'}
+                </code>
+                <span className="block mt-1 text-[10px] text-amber-300/80">You can also sign in directly below right now!</span>
+              </div>
+            )}
+
+            {/* Error Message inside modal */}
+            {modalError && (
+              <div className="mb-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-300 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (manualModal.email) {
+                  executeSocialLogin(manualModal.provider, manualModal.email, manualModal.name);
+                }
+              }}
+              className="space-y-3"
+            >
+              {/* Previously used accounts on this device */}
+              {savedAccounts.filter(a => a.provider === manualModal.provider).length > 0 && (
+                <div>
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Previously Used on this Device:
+                  </span>
+                  <div className="space-y-1.5 mb-2">
+                    {savedAccounts
+                      .filter(a => a.provider === manualModal.provider)
+                      .map((acc) => (
+                        <button
+                          key={acc.email}
+                          type="button"
+                          onClick={() => {
+                            setManualModal(prev => ({
+                              ...prev,
+                              email: acc.email,
+                              name: acc.name,
+                            }));
+                          }}
+                          className={`w-full p-2 rounded-xl text-left border transition flex items-center gap-2.5 ${
+                            manualModal.email.toLowerCase() === acc.email.toLowerCase()
+                              ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300'
+                              : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                            {acc.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold truncate">{acc.name}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{acc.email}</p>
+                          </div>
+                          {manualModal.email.toLowerCase() === acc.email.toLowerCase() && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">
-                  Email Address
+                  {manualModal.provider === 'google' ? 'Google Email Address' : 'Facebook Email / Profile'}
                 </label>
-                <input
-                  type="email"
-                  required
-                  placeholder={manualModal.provider === 'google' ? 'your.email@gmail.com' : 'your.email@facebook.com'}
-                  value={manualModal.email}
-                  onChange={(e) => setManualModal((prev) => ({ ...prev, email: e.target.value }))}
-                  className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white"
-                />
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    placeholder={manualModal.provider === 'google' ? 'you@gmail.com' : 'you@facebook.com'}
+                    value={manualModal.email}
+                    onChange={(e) => {
+                      setManualModal((prev) => ({ ...prev, email: e.target.value }));
+                      if (modalError) setModalError(null);
+                    }}
+                    className="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-400 block mb-1">
                   Full Name (Optional)
                 </label>
-                <input
-                  type="text"
-                  placeholder="Your Name"
-                  value={manualModal.name}
-                  onChange={(e) => setManualModal((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white"
-                />
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Your Name"
+                    value={manualModal.name}
+                    onChange={(e) => setManualModal((prev) => ({ ...prev, name: e.target.value }))}
+                    className="w-full glass-input rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
+                  />
+                </div>
               </div>
 
               <button
-                type="button"
-                disabled={!manualModal.email}
-                onClick={() => executeSocialLogin(manualModal.provider, manualModal.email, manualModal.name)}
-                className="w-full mt-2 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition"
+                type="submit"
+                disabled={!manualModal.email || Boolean(socialLoading)}
+                className={`w-full mt-2 py-3 rounded-xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 min-h-[44px] ${
+                  manualModal.provider === 'google'
+                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                    : 'bg-[#1877F2] hover:bg-[#166fe5] text-white'
+                }`}
               >
-                Sign In with {manualModal.provider === 'google' ? 'Google' : 'Facebook'}
+                {socialLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <span>Continue with {manualModal.provider === 'google' ? 'Google' : 'Facebook'}</span>
+                )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
